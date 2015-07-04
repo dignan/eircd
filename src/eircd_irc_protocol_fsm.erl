@@ -149,7 +149,7 @@ send_message_to_channels(Channels, Message) -> [eircd_channel:send_message(C, se
 
 target_type(Target) ->
     case binary:first(Target) of
-        <<"#">> -> channel;
+        $# -> channel;
         _ -> nick
     end.
 
