@@ -1,7 +1,7 @@
 -module(eircd_channel).
 -behaviour(gen_server).
 -export([start_link/1]).
--export([join/3, send_message/3, nick/3]).
+-export([join/3, part/3, send_message/3, nick/3]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([gproc_key/1]).
 
@@ -18,6 +18,9 @@ start_link(Name) ->
 join(ChannelPid, Pid, Nick) ->
     gen_server:call(ChannelPid, {join, Pid, Nick}).
 
+part(ChannelPid, Pid, Nick) ->
+    gen_server:call(ChannelPid, {part, Pid, Nick}).
+
 nick(Pid, OldNick, Nick) ->
     gen_server:call(Pid, {nick, OldNick, Nick}).
 
@@ -33,6 +36,13 @@ handle_call({join, Pid, Nick}, _From, State=#state{members=Members, topic=Topic,
     case lists:member(Pid, Members) of
         true -> {reply, {error, alreadyjoined}, State};
         false -> {reply, {ok, Topic}, State#state{members = [Pid|Members], names = [Nick|Names]}}
+    end;
+handle_call({part, Pid, Nick}, _From, State=#state{members=Members, names=Names}) ->
+    case lists:member(Pid, Members) of
+        true ->
+            {reply, ok, State#state{members = lists:delete(Pid, Members), names = lists:delete(Nick, Names)}};
+        false ->
+            {reply, {error, notonchannel}, State}
     end;
 handle_call({send, Pid, Message}, _From, State=#state{members=Members}) ->
     case lists:member(Pid, Members) of

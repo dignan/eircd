@@ -86,18 +86,20 @@ connected({irc, {_, <<"PRIVMSG">>, [Target], MessageText}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     case get_target_pid(Target) of
         undefined ->
-            Message = eircd_irc_messages:err_nosuchnick(State#state.servername, State#state.nick, Target),
-            eircd_irc_protocol:send_message(State#state.protocol, Message),
+            eircd_irc_protocol:send_message(State#state.protocol, eircd_irc_messages:err_nosuchnick(
+                State#state.servername,
+                State#state.nick,
+                Target
+            )),
             {next_state, connected, State};
         TargetPid ->
-            Message = eircd_irc_messages:privmsg(
+            send_message_to_nick_or_channel(TargetPid, eircd_irc_messages:privmsg(
                 State#state.nick,
                 State#state.user,
                 State#state.address,
                 Target,
                 MessageText
-            ),
-            send_message_to_nick_or_channel(TargetPid, Message),
+            )),
             {next_state, connected, State}
     end;
 connected({irc, {_, <<"JOIN">>, [Channel], _}}, State=#state{channels=Channels}) ->
@@ -118,6 +120,35 @@ connected({irc, {_, <<"JOIN">>, [Channel], _}}, State=#state{channels=Channels})
             maybe_send_topic(State#state.protocol, State#state.servername, State#state.nick, Channel, Topic),
             lager:info("Joined channel: ~p <- ~p", [Channel, State#state.nick]),
             {next_state, connected, State#state{channels = [Channel|Channels]}}
+    end;
+connected({irc, {_, <<"PART">>, [Channel], PartMessage}}, State=#state{channels=Channels}) ->
+    eircd_ping_fsm:mark_activity(State#state.ping_fsm),
+    case gproc:where({n, l, eircd_channel:gproc_key(Channel)}) of
+        undefined ->
+            eircd_irc_protocol:send_message(State#state.protocol,
+                eircd_irc_messages:err_nosuchnick(State#state.servername, State#state.nick, Channel)),
+            {next_state, connected, State};
+        Pid ->
+            case eircd_channel:part(Pid, self(), Channel) of
+                {error, notonchannel} ->
+                    eircd_irc_protocol:send_message(State#state.protocol, eircd_irc_messages:err_notonchannel(
+                        State#state.servername,
+                        State#state.nick,
+                        Channel
+                    )),
+                    {next_state, connected, State};
+                ok ->
+                    Message = eircd_irc_messages:part(
+                        State#state.nick,
+                        State#state.user,
+                        State#state.address,
+                        Channel,
+                        PartMessage
+                    ),
+                    eircd_irc_protocol:send_message(State#state.protocol, Message),
+                    eircd_channel:send_message(Pid, self(), Message),
+                    {next_state, connected, State#state{channels = lists:delete(Channel, Channels)}}
+            end
     end;
 connected({send, Message}, State) ->
     eircd_irc_protocol:send_message(State#state.protocol, Message),
