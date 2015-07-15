@@ -18,4 +18,4 @@ init([]) ->
       temporary, 5000, worker, [eircd_ping_fsm]
     }
   ],
-  {ok, { {simple_one_for_one, 5, 10}, Children} }.
+  {ok, { {simple_one_for_one, 0, 1}, Children} }.
