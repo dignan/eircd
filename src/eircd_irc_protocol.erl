@@ -33,7 +33,8 @@ init(Ref, Socket, Transport, _Opts) ->
     ok = Transport:setopts(Socket, [{active, once}]),
     erlang:send_after(1000, self(), process_message),
     {ok, {Address, _}} = inet:peername(Socket),
-    {ok, Pid} = eircd_irc_protocol_fsm:start_link(self(), Address),
+    {ok, Pid} = eircd_irc_protocol_fsm_sup:start_child(self(), Address),
+    link(Pid),
     lager:info("New client: ~p", [Address]),
     gen_server:enter_loop(?MODULE, [], #state{
         ref = Ref,

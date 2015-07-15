@@ -17,6 +17,16 @@ init([]) ->
             eircd_channel_sup,
             {eircd_channel_sup, start_link, []},
             permanent, 5000, supervisor, [eircd_channel_sup]
+        },
+        {
+            eircd_ping_fsm_sup,
+            {eircd_ping_fsm_sup, start_link, []},
+            permanent, 5000, supervisor, [eircd_ping_fsm_sup]
+        },
+        {
+            eircd_protocol_fsm_sup,
+            {eircd_protocol_fsm_sup, start_link, []},
+            permanent, 5000, supervisor, [eircd_protocol_fsm_sup]
         }
     ],
     {ok, { {one_for_one, 5, 10}, Children} }.

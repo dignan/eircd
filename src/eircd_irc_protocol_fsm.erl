@@ -28,7 +28,8 @@ init([Protocol, Address]) ->
     true = gproc:reg({p, l, {module, ?MODULE}}),
     {ok, ServerName} = application:get_env(eircd, servername),
     {ok, ConnectTimeout} = application:get_env(eircd, connect_timeout),
-    {ok, PingFsm} = eircd_ping_fsm:start_link(Protocol),
+    {ok, PingFsm} = eircd_ping_fsm_sup:start_child(Protocol),
+    link(PingFsm),
     {ok, nick_and_user, #state{
         address = Address,
         protocol = Protocol,
