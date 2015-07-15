@@ -1,4 +1,4 @@
--module(eircd_protocol_fsm_sup).
+-module(eircd_irc_protocol_fsm_sup).
 -behaviour(supervisor).
 -export([start_link/0]).
 -export([start_child/2]).
