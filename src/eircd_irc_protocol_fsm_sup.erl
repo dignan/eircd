@@ -13,9 +13,9 @@ start_child(Protocol, Address) ->
 init([]) ->
   Children = [
     {
-      eircd_protocol_fsm_sup,
-      {eircd_protocol_fsm_sup, start_link, []},
-      temporary, 5000, worker, [eircd_protocol_fsm_sup]
+      eircd_irc_protocol_fsm,
+      {eircd_irc_protocol_fsm, start_link, []},
+      temporary, 5000, worker, [eircd_irc_protocol_fsm]
     }
   ],
   {ok, { {simple_one_for_one, 0, 1}, Children} }.

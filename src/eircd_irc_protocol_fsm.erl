@@ -130,7 +130,7 @@ connected({irc, {_, <<"PART">>, [Channel], PartMessage}}, State=#state{channels=
                 eircd_irc_messages:err_nosuchnick(State#state.servername, State#state.nick, Channel)),
             {next_state, connected, State};
         Pid ->
-            case eircd_channel:part(Pid, self(), Channel) of
+            case eircd_channel:part(Pid, self(), State#state.nick, State#state.user, State#state.address, PartMessage) of
                 {error, notonchannel} ->
                     eircd_irc_protocol:send_message(State#state.protocol, eircd_irc_messages:err_notonchannel(
                         State#state.servername,
@@ -139,15 +139,13 @@ connected({irc, {_, <<"PART">>, [Channel], PartMessage}}, State=#state{channels=
                     )),
                     {next_state, connected, State};
                 ok ->
-                    Message = eircd_irc_messages:part(
+                    eircd_irc_protocol:send_message(State#state.protocol, eircd_irc_messages:part(
                         State#state.nick,
                         State#state.user,
                         State#state.address,
                         Channel,
                         PartMessage
-                    ),
-                    eircd_irc_protocol:send_message(State#state.protocol, Message),
-                    eircd_channel:send_message(Pid, self(), Message),
+                    )),
                     {next_state, connected, State#state{channels = lists:delete(Channel, Channels)}}
             end
     end;
