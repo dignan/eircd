@@ -48,7 +48,10 @@ handle_call({part, Pid, Nick, User, Address, PartMessage}, From, State=#state{me
                 PartMessage
             ),
             handle_call({send, Pid, Message}, From, State),
-            {reply, ok, State#state{members = lists:delete(Pid, Members), names = lists:delete(Nick, Names)}};
+            Members2 = lists:delete(Pid, Members),
+            if length(Members2) =< 0 -> {stop, normal, State};
+                true -> {reply, ok, State#state{members = lists:delete(Pid, Members), names = lists:delete(Nick, Names)}}
+            end;
         false ->
             {reply, {error, notonchannel}, State}
     end;

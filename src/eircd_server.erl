@@ -1,4 +1,5 @@
 -module(eircd_server).
+-include("eircd.hrl").
 -behaviour(gen_server).
 -export([start_link/0]).
 -export([channel/1, nick/1, nick/2]).
@@ -6,7 +7,8 @@
 
 -record(state, {
     nicks = gb_sets:new(),
-    channels = gb_sets:new()
+    channels = gb_sets:new(),
+    channel_refs = dict:new()
 }).
 
 start_link() ->
@@ -24,14 +26,14 @@ nick(OldNick, Nick) ->
 init([]) ->
     {ok, #state{}}.
 
-handle_call({channel, Channel}, _From, State=#state{channels=Channels}) ->
+handle_call({channel, Channel}, _From, State=#state{channels=Channels, channel_refs=ChannelRefs}) ->
     case gb_sets:is_subset(gb_sets:singleton(Channel), Channels) of
         true ->
             {reply, {ok, gproc:lookup_pid({n, l, eircd_channel:gproc_key(Channel)})}, State};
         false ->
             {ok, Pid} = eircd_channel_sup:start_child(Channel),
-            erlang:monitor(process, Pid),
-            {reply, {ok, Pid}, State#state{channels = gb_sets:add(Channel, Channels)}}
+            Ref = erlang:monitor(process, Pid),
+            {reply, {ok, Pid}, State#state{channels = gb_sets:add(Channel, Channels), channel_refs = dict:append(Ref, Channel, ChannelRefs)}}
     end;
 handle_call({nick, Nick}, _From, State=#state{nicks=Nicks}) ->
     case gb_sets:is_subset(gb_sets:singleton(Nick), Nicks) of
@@ -47,6 +49,13 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Request, State) ->
     {noreply, State}.
 
+handle_info({'DOWN', Ref, process, _Pid2, _Reason}, State=#state{channels=Channels, channel_refs=ChannelRefs}) ->
+    lager:info("Dead channel"),
+    {ok, Channel} = dict:find(Ref, ChannelRefs),
+    {noreply, State#state{
+        channels = gb_sets:subtract(Channels, gb_sets:singleton(Channel)),
+        channel_refs = dict:erase(Ref, ChannelRefs)
+    }};
 handle_info(_Info, State) ->
     {noreply, State}.
 
