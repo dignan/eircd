@@ -1,6 +1,5 @@
 PROJECT = eircd
 
-DEPS = ranch gproc lager
+DEPS = gproc lager ranch
 
 include erlang.mk
-
