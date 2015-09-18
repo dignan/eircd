@@ -31,17 +31,14 @@ init([Protocol, Address]) ->
     {ok, ServerName} = application:get_env(eircd, servername),
     {ok, ConnectTimeout} = application:get_env(eircd, connect_timeout),
     {ok, PingFsm} = eircd_ping_fsm_sup:start_child(Protocol),
-    {StateName, Pass2} = case application:get_env(eircd, pass) of
-	{ok, Pass} -> {pass, Pass};
-	undefined -> {nick_and_user, undefined}
-    end,
+    Pass = application:get_env(eircd, pass, undefined),
     link(PingFsm),
-    {ok, StateName, #state{
+    {ok, pass, #state{
         address = Address,
         protocol = Protocol,
         servername = ServerName,
         ping_fsm = PingFsm,
-        pass = Pass2
+        pass = Pass
     }, ConnectTimeout}.
 
 pass({irc, {_, <<"PASS">>, [Pass], _}}, State) ->
@@ -64,7 +61,9 @@ nick_and_user({irc, {_, <<"USER">>, [User, _Hostname, _Servername], RealName}}, 
 nick_and_user(timeout, _State) ->
     exit(timeout).
 
-maybe_welcome(State=#state{pass=Pass, pass_provided=Pass2}) when Pass =/= Pass2, Pass =/= undefined ->
+maybe_welcome(State=#state{pass=Pass, pass_provided=Pass2}) when Pass =/= Pass2,
+								 Pass =/= undefined,
+								 pass_provided =/= undefined ->
     eircd_irc_protocol:send_message(State#state.protocol, {<<"ERROR">>, [], <<"Closing Link (Password mismatch)">>}),
     exit(password_mismatch);
 maybe_welcome(State=#state{nick=Nick, user=User}) when Nick =/= undefined, User =/= undefined ->
