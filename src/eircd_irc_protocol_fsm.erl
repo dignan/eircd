@@ -4,7 +4,7 @@
 
 -export([start_link/2]).
 -export([send_message/2]).
--export([nick_and_user/2, connected/2]).
+-export([pass/2, nick_and_user/2, connected/2]).
 -export([init/1, handle_event/3, handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
 
 -record(state, {
@@ -15,7 +15,9 @@
     address,
     servername,
     ping_fsm,
-    channels = []
+    channels = [],
+    pass = undefined,
+    pass_provided = undefined
 }).
 
 start_link(Protocol, Address) ->
@@ -29,13 +31,22 @@ init([Protocol, Address]) ->
     {ok, ServerName} = application:get_env(eircd, servername),
     {ok, ConnectTimeout} = application:get_env(eircd, connect_timeout),
     {ok, PingFsm} = eircd_ping_fsm_sup:start_child(Protocol),
+    {StateName, Pass2} = case application:get_env(eircd, pass) of
+	{ok, Pass} -> {pass, Pass};
+	undefined -> {nick_and_user, undefined}
+    end,
     link(PingFsm),
-    {ok, nick_and_user, #state{
+    {ok, StateName, #state{
         address = Address,
         protocol = Protocol,
         servername = ServerName,
-        ping_fsm = PingFsm
+        ping_fsm = PingFsm,
+        pass = Pass2
     }, ConnectTimeout}.
+
+pass({irc, {_, <<"PASS">>, [Pass], _}}, State) ->
+    {next_state, nick_and_user, State#state{pass_provided = binary_to_list(Pass)}};
+pass(M, State) -> nick_and_user(M, State).
 
 nick_and_user({irc, {_, <<"NICK">>, [Nick], _}}, State=#state{nick=undefined}) ->
     case eircd_server:nick(Nick) of
@@ -53,6 +64,9 @@ nick_and_user({irc, {_, <<"USER">>, [User, _Hostname, _Servername], RealName}}, 
 nick_and_user(timeout, _State) ->
     exit(timeout).
 
+maybe_welcome(State=#state{pass=Pass, pass_provided=Pass2}) when Pass =/= Pass2, Pass =/= undefined ->
+    eircd_irc_protocol:send_message(State#state.protocol, {<<"ERROR">>, [], <<"Closing Link (Password mismatch)">>}),
+    exit(password_mismatch);
 maybe_welcome(State=#state{nick=Nick, user=User}) when Nick =/= undefined, User =/= undefined ->
     welcome(State);
 maybe_welcome(State) ->

@@ -17,6 +17,7 @@
     {connect_timeout, 30000},
     {ping_idle_timeout, 60000000},
     {ping_response_timeout, 30000},
-    {max_queue_len, 10000}
+    {max_queue_len, 10000},
+    {pass, "test"}
   ]}
  ]}.
