@@ -149,6 +149,35 @@ connected({irc, {_, <<"PART">>, [Channel], PartMessage}}, State=#state{channels=
                     {next_state, connected, State#state{channels = lists:delete(Channel, Channels)}}
             end
     end;
+connected({irc, {_, <<"TOPIC">>, [Channel], Topic}}, State) ->
+    eircd_ping_fsm:mark_activity(State#state.ping_fsm),
+    case gproc:where({n, l, eircd_channel:gproc_key(Channel)}) of
+        undefined ->
+	    eircd_irc_protocol:send_message(State#state.protocol, eircd_irc_messages:err_nosuchchannel(
+	        State#state.servername,
+                Channel
+            )),
+	    {next_state, connected, State};
+        Pid ->
+	    R = eircd_channel:topic(
+		  Pid,
+                  self(),
+		  State#state.nick,
+		  State#state.user,
+		  State#state.address,
+		  Topic
+            ),
+	    case R of
+	        {error, nosuchchannel} ->
+		    eircd_irc_protocol:send_message(State#state.protocol, eircd_irc_messages:nosuchchannel(
+		        State#state.servername,
+		        Channel
+                    )),
+		    {next_state, connected, State};
+	        ok ->
+		    {next_state, connected, State}
+             end
+    end;    
 connected({send, Message}, State) ->
     eircd_irc_protocol:send_message(State#state.protocol, Message),
     {next_state, connected, State};

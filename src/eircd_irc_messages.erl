@@ -3,12 +3,14 @@
 -export([rpl_topic/4]).
 -export([err_nicknameinuse/2]).
 -export([err_nosuchnick/3]).
+-export([err_nosuchchannel/2]).
 -export([err_notonchannel/3]).
 -export([pong/1]).
 -export([ping/1]).
 -export([nick/4]).
 -export([join/4]).
 -export([part/5]).
+-export([topic/5]).
 -export([privmsg/5]).
 
 rpl_welcome(ServerName, Nick) ->
@@ -22,6 +24,9 @@ err_nicknameinuse(ServerName, Nick) ->
 
 err_nosuchnick(ServerName, Nick, Target) ->
     rpl_numeric(ServerName, 401, [Nick, Target], <<"No such nick/channel.">>).
+
+err_nosuchchannel(ServerName, Channel) ->
+    rpl_numeric(ServerName, 403, [Channel], <<"No such channel">>).
 
 err_notonchannel(ServerName, Nick, Channel) ->
     rpl_numeric(ServerName, 442, [Nick, Channel], <<"You're not on that channel">>).
@@ -40,6 +45,9 @@ join(Nick, User, Address, Channel) ->
 
 part(Nick, User, Address, Channel, PartMessage) ->
     {get_prefix(Nick, User, Address), <<"PART">>, [Channel], PartMessage}.
+
+topic(Nick, User, Address, Channel, Topic) ->
+    {get_prefix(Nick, User, Address), <<"TOPIC">>, [Channel], Topic}.
 
 get_prefix(Nick, User, Address) -> [Nick, <<"!">>, User, <<"@">>, eircd_utils:get_ip_address_string(Address)].
 
