@@ -190,7 +190,7 @@ connected({irc, {_, <<"TOPIC">>, [Channel], Topic}}, State) ->
 	        ok ->
 		    {next_state, connected, State}
              end
-    end;    
+    end;
 connected({send, Message}, State) ->
     eircd_irc_protocol:send_message(State#state.protocol, Message),
     {next_state, connected, State};

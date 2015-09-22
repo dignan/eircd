@@ -68,12 +68,20 @@ handle_call({topic, Pid, Nick, User, Address, Topic}, _From, State=#state{member
                 Name,
                 Topic
             ),
-            {reply, send(Pid, Message, Members), State#state{topic = Topic}};
+            [eircd_irc_protocol_fsm:send_message(M, Message) || M <- Members],
+            {reply, ok, State#state{topic = Topic}};
         false ->
             {reply, {error, notonchannel}, State}
     end;
 handle_call({send, Pid, Message}, _From, State=#state{members=Members}) ->
-    {reply, send(Pid, Message, lists:delete(Pid, Members)), State};
+    Reply = case lists:member(Pid, Members) of
+        true ->
+            [eircd_irc_protocol_fsm:send_message(M, Message) || M <- lists:delete(Pid, Members)],
+            ok;
+        false ->
+            {error, cannotsendtochan}
+    end,
+    {reply, Reply, State};
 handle_call(_Request, _From, State) ->
     {reply, {error, undefined}, State}.
 
@@ -93,11 +101,3 @@ code_change(_OldVsn, State, _Extra) ->
 
 gproc_key(Name) -> {channel, Name}.
 
-send(Pid, Message, Members) ->
-    case lists:member(Pid, Members) of
-        true ->
-            [eircd_irc_protocol_fsm:send_message(M, Message) || M <- Members],
-            ok;
-        false ->
-            {error, cannotsendtochan}
-    end.
