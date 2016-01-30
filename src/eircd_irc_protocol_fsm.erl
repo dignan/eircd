@@ -72,10 +72,38 @@ maybe_welcome(State) ->
     {next_state, nick_and_user, State}.
 
 welcome(State) ->
-    Reply = eircd_irc_messages:rpl_welcome(State#state.servername, State#state.nick),
-    eircd_irc_protocol:send_message(State#state.protocol, Reply),
+    eircd_irc_protocol:send_message(
+      State#state.protocol,
+      eircd_irc_messages:rpl_welcome(
+	      State#state.servername,
+	      State#state.nick)),
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
+    ok = motd(State),
     {next_state, connected, State}.
+
+motd(State) ->
+    eircd_irc_protocol:send_message(
+      State#state.protocol,
+      eircd_irc_messages:rpl_motdstart(State#state.servername, State#state.nick)),
+    Motd = lists:flatmap(
+	     fun(S) ->
+		     binary:split(S, <<"\r">>)
+	     end,
+	     binary:split(get_motd(), <<"\n">>)),
+    lists:foreach(
+      fun(Line) ->
+	      eircd_irc_protocol:send_message(
+		State#state.protocol,
+		eircd_irc_messages:rpl_motd(
+		  State#state.servername,
+		  State#state.nick,
+		  Line))
+      end,
+      Motd),
+    eircd_irc_protocol:send_message(
+      State#state.protocol,
+      eircd_irc_messages:rpl_motdend(State#state.servername, State#state.nick)),
+    ok.
 
 connected({irc, {_, <<"PING">>, [Token], _}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
@@ -197,6 +225,9 @@ connected({irc, {_, <<"TOPIC">>, [Channel], Topic}}, State) ->
 		    {next_state, connected, State}
              end
     end;
+connected({irc, {_, <<"MOTD">>, _, _}}, State) ->
+    motd(State),
+    {next_state, connected, State};
 connected({send, Message}, State) ->
     eircd_irc_protocol:send_message(State#state.protocol, Message),
     {next_state, connected, State};
@@ -245,8 +276,10 @@ get_target_pid(Target) ->
             end
     end.
 
-send_message_to_nick_or_channel({nick, Pid}, Message) -> eircd_irc_protocol:send_message(Pid, Message);
-send_message_to_nick_or_channel({channel, Pid}, Message) -> eircd_channel:send_message(Pid, self(), Message).
+send_message_to_nick_or_channel({nick, Pid}, Message) ->
+    eircd_irc_protocol:send_message(Pid, Message);
+send_message_to_nick_or_channel({channel, Pid}, Message) ->
+    eircd_channel:send_message(Pid, self(), Message).
 
 maybe_send_topic(_, _, _, _, <<>>) ->
     ok;
@@ -254,3 +287,18 @@ maybe_send_topic(Protocol, Servername, Nick, Channel, Topic) ->
     eircd_irc_protocol:send_message(
       Protocol,
       eircd_irc_messages:rpl_topic(Servername, Nick, Channel, Topic)).
+
+get_motd() ->    
+    get_motd(application:get_env(eircd, motdfile)).
+
+get_motd(undefined) ->
+    get_motd("./motd.txt");
+get_motd({ok, File}) ->
+    get_motd(File);
+get_motd(File) ->
+    case file:read(File) of
+	{ok, Contents} ->
+	    Contents;
+	{error, enoent} ->
+	    {error, nomotd}
+    end.

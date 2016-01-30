@@ -5,6 +5,10 @@
 -export([err_nosuchnick/3]).
 -export([err_nosuchchannel/2]).
 -export([err_notonchannel/3]).
+-export([rpl_motdstart/2]).
+-export([rpl_motd/3]).
+-export([rpl_motdend/2]).
+-export([rpl_nomotd/2]).
 -export([pong/1]).
 -export([ping/1]).
 -export([nick/4]).
@@ -18,6 +22,18 @@ rpl_welcome(ServerName, Nick) ->
 
 rpl_topic(ServerName, Nick, Channel, Topic) ->
     rpl_numeric(ServerName, 332, [Nick, Channel], Topic).
+
+rpl_motdstart(ServerName, Nick) ->
+    rpl_numeric(ServerName, 375, [Nick], [<<"- ">>, ServerName, <<"Message of the Day -">>]). 
+
+rpl_motd(ServerName, Nick, Line) ->
+    rpl_numeric(ServerName, 372, [Nick], [<<"- ">>, Line]).
+
+rpl_motdend(ServerName, Nick) ->
+    rpl_numeric(ServerName, 376, [Nick], <<"End of /MOTD command.">>).
+
+rpl_nomotd(ServerName, Nick) ->
+    rpl_numeric(ServerName, 422, [Nick], <<"MOTD File is missing.">>).
 
 err_nicknameinuse(ServerName, Nick) ->
     rpl_numeric(ServerName, 433, [<<"*">>, Nick], <<"Nickname is already in use.">>).
