@@ -82,14 +82,22 @@ welcome(State) ->
     {next_state, connected, State}.
 
 motd(State) ->
+    case get_motd() of
+	{error, nomotd} ->
+	    no_motd(State);
+	Content ->
+	    motd(Content, State)
+    end.
+
+motd(Content, State) ->
     eircd_irc_protocol:send_message(
       State#state.protocol,
       eircd_irc_messages:rpl_motdstart(State#state.servername, State#state.nick)),
     Motd = lists:flatmap(
 	     fun(S) ->
-		     binary:split(S, <<"\r">>)
+		     binary:split(S, <<"\r">>, [global])
 	     end,
-	     binary:split(get_motd(), <<"\n">>)),
+	     binary:split(Content, <<"\n">>, [global])),
     lists:foreach(
       fun(Line) ->
 	      eircd_irc_protocol:send_message(
@@ -288,17 +296,29 @@ maybe_send_topic(Protocol, Servername, Nick, Channel, Topic) ->
       Protocol,
       eircd_irc_messages:rpl_topic(Servername, Nick, Channel, Topic)).
 
+no_motd(State) ->
+    eircd_irc_protocol:send_message(
+      State#state.protocol,
+      eircd_irc_messages:rpl_nomotd(
+	State#state.servername,
+	State#state.nick)).
+
 get_motd() ->    
     get_motd(application:get_env(eircd, motdfile)).
 
 get_motd(undefined) ->
-    get_motd("./motd.txt");
+    get_motd("/etc/eircd/motd.txt");
 get_motd({ok, File}) ->
     get_motd(File);
 get_motd(File) ->
-    case file:read(File) of
+    case file:read_file(File) of
 	{ok, Contents} ->
 	    Contents;
 	{error, enoent} ->
 	    {error, nomotd}
     end.
+
+
+
+
+

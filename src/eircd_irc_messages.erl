@@ -24,7 +24,7 @@ rpl_topic(ServerName, Nick, Channel, Topic) ->
     rpl_numeric(ServerName, 332, [Nick, Channel], Topic).
 
 rpl_motdstart(ServerName, Nick) ->
-    rpl_numeric(ServerName, 375, [Nick], [<<"- ">>, ServerName, <<"Message of the Day -">>]). 
+    rpl_numeric(ServerName, 375, [Nick], [<<"- ">>, ServerName, <<" Message of the Day -">>]). 
 
 rpl_motd(ServerName, Nick, Line) ->
     rpl_numeric(ServerName, 372, [Nick], [<<"- ">>, Line]).
