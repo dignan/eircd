@@ -234,6 +234,7 @@ connected({irc, {_, <<"TOPIC">>, [Channel], Topic}}, State) ->
              end
     end;
 connected({irc, {_, <<"MOTD">>, _, _}}, State) ->
+    eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     motd(State),
     {next_state, connected, State};
 connected({send, Message}, State) ->
