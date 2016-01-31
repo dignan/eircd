@@ -232,7 +232,7 @@ connected({irc, {_, <<"TOPIC">>, [Channel], Topic}}, State) ->
 	        {error, nosuchchannel} ->
 		    eircd_irc_protocol:send_message(
 		      State#state.protocol,
-		      eircd_irc_messages:nosuchchannel(
+                      eircd_irc_messages:err_nosuchchannel(
 		        State#state.servername,
 		        Channel)),
 		    {next_state, connected, State};
@@ -246,12 +246,12 @@ connected({irc, {_, <<"MOTD">>, _, _}}, State) ->
     {next_state, connected, State};
 connected({irc, {_, <<"LIST">>, _, _}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
-    Messages = lists:map(make_list_reply(State), eircd_server:list()),
     eircd_irc_protocol:send_message(
       State#state.protocol,
       eircd_irc_messages:rpl_liststart(
         State#state.servername,
         State#state.nick)),
+    Messages = lists:map(make_list_reply(State), eircd_server:list()),
     lists:foreach(
       fun(M) -> 
               eircd_irc_protocol:send_message(State#state.protocol, M)
