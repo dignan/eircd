@@ -285,11 +285,11 @@ terminate(_Reason, _StateName, _StateData) ->
 code_change(_OldVsn, StateName, State, _Extra) ->
     {ok, StateName, State}.
 
-make_list_reply(State) ->
+make_list_reply(#state{servername=ServerName, nick=Nick}) ->
     fun({ChannelName, MemberCount, Topic}) ->
             eircd_irc_messages:rpl_list(
-              State#state.servername,
-              State#state.nick,
+              ServerName,
+              Nick,
               ChannelName,
               MemberCount,
               Topic)
