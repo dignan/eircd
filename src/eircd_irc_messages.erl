@@ -1,5 +1,8 @@
 -module(eircd_irc_messages).
 -export([rpl_welcome/2]).
+-export([rpl_liststart/2]).
+-export([rpl_list/5]).
+-export([rpl_listend/2]).
 -export([rpl_topic/4]).
 -export([err_nicknameinuse/2]).
 -export([err_nosuchnick/3]).
@@ -19,6 +22,19 @@
 
 rpl_welcome(ServerName, Nick) ->
     rpl_numeric(ServerName, 1, [Nick], [<<"Welcome to the Internet Relay Network ">>, Nick]).
+
+rpl_liststart(ServerName, Nick) ->
+    rpl_numeric(ServerName, 321, [Nick], <<"Channel :Users  Name">>).
+
+rpl_list(ServerName, Nick, Channel, NumberVisible, Topic) ->
+    rpl_numeric(
+      ServerName,
+      322,
+      [Nick],
+      eircd_utils:join_list([Channel, NumberVisible, Topic], <<" ">>)).
+
+rpl_listend(ServerName, Nick) ->
+    rpl_numeric(ServerName, 323, [Nick], <<"End of /LIST">>).
 
 rpl_topic(ServerName, Nick, Channel, Topic) ->
     rpl_numeric(ServerName, 332, [Nick, Channel], Topic).
