@@ -2,7 +2,7 @@
 -include("eircd.hrl").
 -behaviour(gen_server).
 -export([start_link/0]).
--export([channel/1, nick/1, nick/2]).
+-export([channel/1, nick/1, nick/2, list/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -record(state, {
@@ -22,6 +22,9 @@ nick(Nick) ->
 
 nick(OldNick, Nick) ->
     gen_server:call(?MODULE, {nick, OldNick, Nick}).
+
+list() ->
+    gen_server:call(?MODULE, list).
 
 init([]) ->
     {ok, #state{}}.
@@ -43,6 +46,8 @@ handle_call({nick, Nick}, _From, State=#state{nicks=Nicks}) ->
 handle_call({nick, OldNick, Nick}, From, State=#state{nicks=Nicks}) ->
     Nicks2 = gb_sets:subtract(Nicks, gb_sets:singleton(OldNick)),
     handle_call({nick, Nick}, From, State#state{nicks=Nicks2});
+handle_call(list, _From, State=#state{channels = Channels}) ->
+    {reply, {ok, lists:map(fun make_channel_list_reply/1, gb_sets:to_list(Channels))}, State};
 handle_call(_Request, _From, State) ->
     {reply, {error, undefined}, State}.
 
@@ -64,3 +69,27 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
+
+make_channel_list_reply(Channel) ->
+    {
+      eircd_channel:name(Channel),
+      eircd_channel:member_count(Channel),
+      eircd_channel:topic(Channel)
+    }.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

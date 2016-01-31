@@ -1,7 +1,7 @@
 -module(eircd_channel).
 -behaviour(gen_server).
 -export([start_link/1]).
--export([join/3, part/6, send_message/3, nick/3, topic/6]).
+-export([join/3, part/6, send_message/3, nick/3, topic/6, member_count/1, topic/1, name/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([gproc_key/1]).
 
@@ -30,6 +30,15 @@ send_message(ChannelPid, Pid, Message) ->
 topic(ChannelPid, Pid, Nick, User, Address, Topic) ->
     gen_server:call(ChannelPid, {topic, Pid, Nick, User, Address, Topic}).
 
+topic(ChannelPid) ->
+    gen_server:call(ChannelPid, topic).
+
+member_count(ChannelPid) ->
+    gen_server:call(ChannelPid, member_count).
+
+name(ChannelPid) ->
+    gen_server:call(ChannelPid, name).
+
 init([Name]) ->
     true = gproc:reg({n, l, gproc_key(Name)}),
     true = gproc:reg({p, l, {module, ?MODULE}}),
@@ -48,8 +57,7 @@ handle_call({part, Pid, Nick, User, Address, PartMessage}, From, State=#state{me
                 User,
                 Address,
                 Name,
-                PartMessage
-            ),
+                PartMessage),
             handle_call({send, Pid, Message}, From, State),
             Members2 = lists:delete(Pid, Members),
             if length(Members2) =< 0 -> {stop, normal, State};
@@ -66,8 +74,7 @@ handle_call({topic, Pid, Nick, User, Address, Topic}, _From, State=#state{member
                 User,
                 Address,
                 Name,
-                Topic
-            ),
+                Topic),
             [eircd_irc_protocol_fsm:send_message(M, Message) || M <- Members],
             {reply, ok, State#state{topic = Topic}};
         false ->
@@ -82,6 +89,12 @@ handle_call({send, Pid, Message}, _From, State=#state{members=Members}) ->
             {error, cannotsendtochan}
     end,
     {reply, Reply, State};
+handle_call(member_count, _From, State=#state{members=Members}) ->
+    {reply, {ok, length(Members)}, State};
+handle_call(topic, _From, State=#state{topic=Topic}) ->
+    {reply, {ok, Topic}, State};
+handle_call(name, _From, State=#state{name=Name}) ->
+    {reply, {ok, Name}, State};
 handle_call(_Request, _From, State) ->
     {reply, {error, undefined}, State}.
 
@@ -100,4 +113,5 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 gproc_key(Name) -> {channel, Name}.
+
 

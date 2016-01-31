@@ -8,16 +8,18 @@
 -export([init/1, handle_event/3, handle_sync_event/4, handle_info/3, terminate/3, code_change/4]).
 
 -record(state, {
-    protocol,
-    nick,
-    user,
-    realname,
-    address,
-    servername,
-    ping_fsm,
-    channels = [],
-    pass = undefined,
-    pass_provided = undefined
+          protocol,
+          nick,
+          user,
+          realname,
+          address,
+          servername,
+          ping_fsm,
+          channels = [],
+          pass = undefined,
+          pass_provided = undefined,
+          user_modes = [],
+          channel_modes = []
 }).
 
 start_link(Protocol, Address) ->
@@ -169,7 +171,12 @@ connected({irc, {_, <<"JOIN">>, [Channel], _}}, State=#state{channels=Channels})
 			Channel),
             eircd_irc_protocol:send_message(State#state.protocol, Message),
             eircd_channel:send_message(Pid, self(), Message),
-            maybe_send_topic(State#state.protocol, State#state.servername, State#state.nick, Channel, Topic),
+            maybe_send_topic(
+              State#state.protocol,
+              State#state.servername,
+              State#state.nick,
+              Channel,
+              Topic),
             lager:info("Joined channel: ~p <- ~p", [Channel, State#state.nick]),
             {next_state, connected, State#state{channels = [Channel|Channels]}}
     end;
@@ -237,6 +244,25 @@ connected({irc, {_, <<"MOTD">>, _, _}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     motd(State),
     {next_state, connected, State};
+connected({irc, {_, <<"LIST">>, _, _}}, State) ->
+    eircd_ping_fsm:mark_activity(State#state.ping_fsm),
+    Messages = lists:map(make_list_reply(State), eircd_server:list()),
+    eircd_irc_protocol:send_message(
+      State#state.protocol,
+      eircd_irc_messages:rpl_liststart(
+        State#state.servername,
+        State#state.nick)),
+    lists:foreach(
+      fun(M) -> 
+              eircd_irc_protocol:send_message(State#state.protocol, M)
+      end,
+      Messages),
+    eircd_irc_protocol:send_message(
+      State#state.protocol,
+      eircd_irc_messages:rpl_listend(
+        State#state.servername,
+        State#state.nick)),
+    {next_state, connected, State};
 connected({send, Message}, State) ->
     eircd_irc_protocol:send_message(State#state.protocol, Message),
     {next_state, connected, State};
@@ -258,6 +284,16 @@ terminate(_Reason, _StateName, _StateData) ->
 
 code_change(_OldVsn, StateName, State, _Extra) ->
     {ok, StateName, State}.
+
+make_list_reply(State) ->
+    fun({ChannelName, MemberCount, Topic}) ->
+            eircd_irc_messages:rpl_list(
+              State#state.servername,
+              State#state.nick,
+              ChannelName,
+              MemberCount,
+              Topic)
+    end.
 
 gproc_key(Nick) -> {nick, Nick}.
 
@@ -318,8 +354,4 @@ get_motd(File) ->
 	{error, enoent} ->
 	    {error, nomotd}
     end.
-
-
-
-
 
