@@ -1,6 +1,6 @@
 # eircd
 
-Electronic internet relay daemon
+Electronic Internet Relay Daemon
 
 ![irc](https://github.com/wcummings/eircd/blob/master/irc.jpg?raw=true)
 
