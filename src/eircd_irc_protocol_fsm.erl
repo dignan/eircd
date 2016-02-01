@@ -102,10 +102,7 @@ connected({irc, {_, <<"NICK">>, [NewNick], _}}, State=#state{nick=Nick, user=Use
             eircd_channel:nick(self(), Nick, NewNick)
     end,
     {next_state, connected, State};
-connected({irc, {_, <<"PRIVMSG">>, [[Target]], MessageText}}, State) ->
-    eircd_ping_fsm:mark_activity(State#state.ping_fsm),
-    {next_state, connected, privmsg(Target, MessageText, State)};
-connected({irc, {_, <<"PRIVMSG">>, [Targets], MessageText}}, State) ->
+connected({irc, {_, <<"PRIVMSG">>, [Targets], MessageText}}, State) when is_list(Targets) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     State2 = lists:foldl(
                fun(Target) ->
@@ -113,6 +110,9 @@ connected({irc, {_, <<"PRIVMSG">>, [Targets], MessageText}}, State) ->
                end,
                Targets),
     {next_state, connected, State2};
+connected({irc, {_, <<"PRIVMSG">>, [Target], MessageText}}, State) ->
+    eircd_ping_fsm:mark_activity(State#state.ping_fsm),
+    {next_state, connected, privmsg(Target, MessageText, State)};
 connected({irc, {_, <<"JOIN">>, [Channels], _}}, State) when is_list(Channels) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     State2 = lists:foldl(
@@ -121,10 +121,10 @@ connected({irc, {_, <<"JOIN">>, [Channels], _}}, State) when is_list(Channels) -
                end,
                Channels),
     {next_state, connected, State2};
-connected({irc, {_, <<"JOIN">>, [[Channel]], _}}, State)->
+connected({irc, {_, <<"JOIN">>, [Channel], _}}, State)->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     {next_state, connected, join(Channel, State)};
-connected({irc, {_, <<"PART">>, [Channels], PartMessage}}, State) ->
+connected({irc, {_, <<"PART">>, [Channels], PartMessage}}, State) when is_list(Channels) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     State2 = lists:foldl(
       fun(Channel) ->
@@ -132,10 +132,10 @@ connected({irc, {_, <<"PART">>, [Channels], PartMessage}}, State) ->
       end,
       Channels),
     {next_state, connected, State2};
-connected({irc, {_, <<"PART">>, [[Channel]], PartMessage}}, State) ->
+connected({irc, {_, <<"PART">>, [Channel], PartMessage}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     {next_state, connected, part(Channel, PartMessage, State)};
-connected({irc, {_, <<"TOPIC">>, [[Channel]], undefined}}, State) ->
+connected({irc, {_, <<"TOPIC">>, [Channel], undefined}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     case gproc:where({n, l, eircd_channel:gproc_key(Channel)}) of
         undefined ->
@@ -155,7 +155,7 @@ connected({irc, {_, <<"TOPIC">>, [[Channel]], undefined}}, State) ->
               Topic),
             {next_state, connected, State}
     end;
-connected({irc, {_, <<"TOPIC">>, [[Channel]], Topic}}, State) ->
+connected({irc, {_, <<"TOPIC">>, [Channel], Topic}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     case gproc:where({n, l, eircd_channel:gproc_key(Channel)}) of
         undefined ->
@@ -262,7 +262,7 @@ privmsg(Target, MessageText, State) ->
 		State#state.servername,
 		State#state.nick,
 		Target)),
-            {next_state, connected, State};
+            State;
         TargetPid ->
             send_message_to_nick_or_channel(
 	      TargetPid,
@@ -272,7 +272,7 @@ privmsg(Target, MessageText, State) ->
                 State#state.address,
                 Target,
                 MessageText)),
-            {next_state, connected, State}
+            State
     end.
 
 part(Channel, undefined, State=#state{nick=Nick}) -> part(Channel, Nick, State);
@@ -344,7 +344,7 @@ get_target_pid(Target) ->
     end.
 
 send_message_to_nick_or_channel({nick, Pid}, Message) ->
-    eircd_irc_protocol:send_message(Pid, Message);
+    eircd_irc_protocol_fsm:send_message(Pid, Message);
 send_message_to_nick_or_channel({channel, Pid}, Message) ->
     eircd_channel:send_message(Pid, self(), Message).
 

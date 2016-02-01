@@ -142,4 +142,7 @@ get_command(Line) ->
     end.
 
 split_args(Args) ->
-    binary:split(Args, <<",">>, [global]).
+    case binary:match(Args, <<",">>) of
+        nomatch -> Args;
+        _ -> binary:split(Args, <<",">>, [global])
+    end.
