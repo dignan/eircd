@@ -23,7 +23,7 @@ part(ChannelPid, Pid, Nick, User, Address, PartMessage) ->
     gen_server:call(ChannelPid, {part, Pid, Nick, User, Address, PartMessage}).
 
 nick(Pid, OldNick, Nick) ->
-    gen_server:call(Pid, {nick, OldNick, Nick}).
+    gen_server:cast(Pid, {nick, OldNick, Nick}).
 
 send_message(ChannelPid, Pid, Message) ->
     gen_server:call(ChannelPid, {send, Pid, Message}).
