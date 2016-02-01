@@ -130,13 +130,16 @@ get_command(Line) ->
     case binary:match(Line, <<" :">>) of
         nomatch ->
             [Command|Args] = binary:split(Line, <<" ">>),
-            {Command, Args, undefined};
+            {Command, [split_args(A) || A <- Args], undefined};
         _ ->
             case binary:split(Line, <<" :">>) of
                 [Args, Trailing] ->
                     [Command|Args2] = binary:split(Args, <<" ">>, [global]),
-                    {Command, Args2, Trailing};
+                    {Command, [split_args(A) || A <- Args2], Trailing};
                 _ ->
                     throw(bad_message)
             end
     end.
+
+split_args(Args) ->
+    binary:split(Args, <<",">>, [global]).
