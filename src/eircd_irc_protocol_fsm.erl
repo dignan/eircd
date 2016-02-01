@@ -47,7 +47,7 @@ pass({irc, {_, <<"PASS">>, [Pass], _}}, State) ->
     {next_state, nick_and_user, State#state{pass_provided = binary_to_list(Pass)}};
 pass(M, State) -> nick_and_user(M, State).
 
-;; Ignore CAP so we don't break v3 clients
+%% Ignore CAP so we don't break v3 clients
 nick_and_user({irc, {_, <<"CAP">>, _, _}}, State) ->
     {next_state, nick_and_user, State};
 nick_and_user({irc, {_, <<"NICK">>, [Nick], _}}, State=#state{nick=undefined}) ->
