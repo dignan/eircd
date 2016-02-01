@@ -36,7 +36,8 @@ handle_call({channel, Channel}, _From, State=#state{channels=Channels, channel_r
         false ->
             {ok, Pid} = eircd_channel_sup:start_child(Channel),
             Ref = erlang:monitor(process, Pid),
-            {reply, {ok, Pid}, State#state{channels = gb_sets:add(Channel, Channels), channel_refs = dict:append(Ref, Channel, ChannelRefs)}}
+            {reply, {ok, Pid}, State#state{channels = gb_sets:add(Channel, Channels),
+                                           channel_refs = dict:append(Ref, Channel, ChannelRefs)}}
     end;
 handle_call({nick, Nick}, _From, State=#state{nicks=Nicks}) ->
     case gb_sets:is_subset(gb_sets:singleton(Nick), Nicks) of
@@ -47,7 +48,7 @@ handle_call({nick, OldNick, Nick}, From, State=#state{nicks=Nicks}) ->
     Nicks2 = gb_sets:subtract(Nicks, gb_sets:singleton(OldNick)),
     handle_call({nick, Nick}, From, State#state{nicks=Nicks2});
 handle_call(list, _From, State=#state{channels = Channels}) ->
-    {reply, {ok, lists:map(fun make_channel_list_reply/1, gb_sets:to_list(Channels))}, State};
+    {reply, lists:map(fun make_channel_list_reply/1, gb_sets:to_list(Channels)), State};
 handle_call(_Request, _From, State) ->
     {reply, {error, undefined}, State}.
 
@@ -58,8 +59,8 @@ handle_info({'DOWN', Ref, process, _Pid2, _Reason}, State=#state{channels=Channe
     lager:info("Dead channel"),
     {ok, Channel} = dict:find(Ref, ChannelRefs),
     {noreply, State#state{
-        channels = gb_sets:subtract(Channels, gb_sets:singleton(Channel)),
-        channel_refs = dict:erase(Ref, ChannelRefs)
+                channels = gb_sets:subtract(Channels, gb_sets:singleton(Channel)),
+                channel_refs = dict:erase(Ref, ChannelRefs)
     }};
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -71,25 +72,8 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 make_channel_list_reply(Channel) ->
-    {
-      eircd_channel:name(Channel),
-      eircd_channel:member_count(Channel),
-      eircd_channel:topic(Channel)
-    }.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    Pid = gproc:lookup_pid({n, l, eircd_channel:gproc_key(Channel)}),
+    {ok, Name} = eircd_channel:name(Pid),
+    {ok, MemberCount} = eircd_channel:member_count(Pid),
+    {ok, Topic} = eircd_channel:topic(Pid),
+    {Name, MemberCount, Topic}.

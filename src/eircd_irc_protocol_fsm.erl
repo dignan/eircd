@@ -299,7 +299,8 @@ gproc_key(Nick) -> {nick, Nick}.
 
 gproc_user_property(User) -> {user, User}.
 
-send_message_to_channels(Channels, Message) -> [eircd_channel:send_message(C, self(), Message) || C <- Channels].
+send_message_to_channels(Channels, Message) ->
+    [eircd_channel:send_message(C, self(), Message) || C <- Channels].
 
 target_type(Target) ->
     case binary:first(Target) of

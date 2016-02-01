@@ -31,7 +31,7 @@ rpl_list(ServerName, Nick, Channel, NumberVisible, Topic) ->
       ServerName,
       322,
       [Nick],
-      eircd_utils:join_list([Channel, NumberVisible, Topic], <<" ">>)).
+      eircd_utils:join_list([Channel, integer_to_binary(NumberVisible), Topic], <<" ">>)).
 
 rpl_listend(ServerName, Nick) ->
     rpl_numeric(ServerName, 323, [Nick], <<"End of /LIST">>).
