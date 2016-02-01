@@ -111,6 +111,7 @@ connected({irc, {_, <<"PRIVMSG">>, [Targets], MessageText}}, State) when is_list
                fun(Target) ->
                        privmsg(Target, MessageText, State)
                end,
+               State,
                Targets),
     {next_state, connected, State2};
 connected({irc, {_, <<"PRIVMSG">>, [Target], MessageText}}, State) ->
@@ -122,6 +123,7 @@ connected({irc, {_, <<"JOIN">>, [Channels], _}}, State) when is_list(Channels) -
                fun(Channel) ->
                        join(Channel, State)
                end,
+               State,
                Channels),
     {next_state, connected, State2};
 connected({irc, {_, <<"JOIN">>, [Channel], _}}, State)->
@@ -130,10 +132,11 @@ connected({irc, {_, <<"JOIN">>, [Channel], _}}, State)->
 connected({irc, {_, <<"PART">>, [Channels], PartMessage}}, State) when is_list(Channels) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     State2 = lists:foldl(
-      fun(Channel) ->
-              part(Channel, PartMessage, State)
-      end,
-      Channels),
+               fun(Channel) ->
+                       part(Channel, PartMessage, State)
+               end,
+               State,
+               Channels),
     {next_state, connected, State2};
 connected({irc, {_, <<"PART">>, [Channel], PartMessage}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
@@ -237,7 +240,7 @@ join(Channel, State=#state{channels=Channels}) ->
     {ok, Pid} = eircd_server:channel(Channel),
     case eircd_channel:join(Pid, self(), State#state.nick) of
         {error, alreadyjoined} ->
-            {next_state, connected, State};
+            State;
         {ok, Topic} ->
             Message = eircd_irc_messages:join(
 			State#state.nick,
