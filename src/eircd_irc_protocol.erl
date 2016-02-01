@@ -130,7 +130,7 @@ get_prefix(Line) ->
 get_command(Line) ->
     case binary:match(Line, <<" :">>) of
         nomatch ->
-            [Command|Args] = binary:split(Line, <<" ">>),
+            [Command|Args] = binary:split(Line, <<" ">>, [global]),
             {Command, [split_args(A) || A <- Args], undefined};
         _ ->
             case binary:split(Line, <<" :">>) of
