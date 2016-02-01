@@ -275,6 +275,7 @@ privmsg(Target, MessageText, State) ->
             {next_state, connected, State}
     end.
 
+part(Channel, undefined, State=#state{nick=Nick}) -> part(Channel, Nick, State);
 part(Channel, PartMessage, State=#state{channels=Channels}) ->
     case gproc:where({n, l, eircd_channel:gproc_key(Channel)}) of
         undefined ->
