@@ -248,7 +248,7 @@ join(Channel, State) ->
             join(Channel, Pid, State)
     end.
 
-join(Channel, State=#state{channels=Channels}, Pid) ->
+join(Channel, Pid, State=#state{channels=Channels}) ->
     case eircd_channel:join(Pid, self(), State#state.nick) of
         {error, alreadyjoined} ->
             State;
