@@ -30,14 +30,19 @@ init([]) ->
     {ok, #state{}}.
 
 handle_call({channel, Channel}, _From, State=#state{channels=Channels, channel_refs=ChannelRefs}) ->
-    case gb_sets:is_subset(gb_sets:singleton(Channel), Channels) of
-        true ->
-            {reply, {ok, gproc:lookup_pid({n, l, eircd_channel:gproc_key(Channel)})}, State};
+    case validate_name(Channel) of
         false ->
-            {ok, Pid} = eircd_channel_sup:start_child(Channel),
-            Ref = erlang:monitor(process, Pid),
-            {reply, {ok, Pid}, State#state{channels = gb_sets:add(Channel, Channels),
-                                           channel_refs = dict:append(Ref, Channel, ChannelRefs)}}
+            {reply, {error, nosuchchannel}, State};
+        true -> 
+            case gb_sets:is_subset(gb_sets:singleton(Channel), Channels) of
+                true ->
+                    {reply, {ok, gproc:lookup_pid({n, l, eircd_channel:gproc_key(Channel)})}, State};
+                false ->
+                    {ok, Pid} = eircd_channel_sup:start_child(Channel),
+                    Ref = erlang:monitor(process, Pid),
+                    {reply, {ok, Pid}, State#state{channels = gb_sets:add(Channel, Channels),
+                                                   channel_refs = dict:append(Ref, Channel, ChannelRefs)}}
+            end
     end;
 handle_call({nick, Nick}, _From, State=#state{nicks=Nicks}) ->
     case gb_sets:is_subset(gb_sets:singleton(Nick), Nicks) of
@@ -77,3 +82,10 @@ make_channel_list_reply(Channel) ->
     {ok, MemberCount} = eircd_channel:member_count(Pid),
     {ok, Topic} = eircd_channel:topic(Pid),
     {Name, MemberCount, Topic}.
+
+validate_name(Name) when length(Name) > 50 -> false;
+validate_name(Name) -> 
+    case binary:first(Name) of
+        $# -> true;
+        true -> false
+    end.

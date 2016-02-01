@@ -241,6 +241,11 @@ join(Channel, State=#state{channels=Channels}) ->
     case eircd_channel:join(Pid, self(), State#state.nick) of
         {error, alreadyjoined} ->
             State;
+        {error, nosuchchannel} ->
+            eircd_irc_protocol:send_message(
+              State#state.protocol,
+              eircd_irc_messages:err_nosuchchannel(State#state.servername, Channel)),
+            State;
         {ok, Topic} ->
             Message = eircd_irc_messages:join(
 			State#state.nick,

@@ -114,4 +114,3 @@ code_change(_OldVsn, State, _Extra) ->
 
 gproc_key(Name) -> {channel, Name}.
 
-
