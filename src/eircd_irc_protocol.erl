@@ -62,7 +62,7 @@ handle_info(process_message, State=#state{fsm=Fsm, messages=Messages, max_queue_
     end,
     State2 = case queue:out(Messages) of
         {{value, Message}, Messages2} ->
-                     lager:info("Processing message = ~p, decoded = ~p", Message, decode_message(Message)),
+                     lager:info("Processing message = ~p, decoded = ~p", [Message, decode_message(Message)]),
                      gen_fsm:send_event(Fsm, {irc, decode_message(Message)}),
                      State#state{messages = Messages2};
         {empty, _} ->
