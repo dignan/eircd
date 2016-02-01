@@ -245,11 +245,10 @@ join(Channel, State) ->
               eircd_irc_messages:err_nosuchchannel(State#state.servername, Channel)),
             State;
         {ok, Pid} ->
-                join(Channel, Pid, State)
+            join(Channel, Pid, State)
     end.
 
 join(Channel, State=#state{channels=Channels}, Pid) ->
-    {ok, Pid} = eircd_server:channel(Channel),
     case eircd_channel:join(Pid, self(), State#state.nick) of
         {error, alreadyjoined} ->
             State;
