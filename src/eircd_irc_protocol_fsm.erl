@@ -113,7 +113,7 @@ connected({irc, {_, <<"PRIVMSG">>, [Targets], MessageText}}, State) ->
                end,
                Targets),
     {next_state, connected, State2};
-connected({irc, {_, <<"JOIN">>, [Channels], _}} = M, State) when is_list(Channels) ->
+connected({irc, {_, <<"JOIN">>, [Channels], _}}, State) when is_list(Channels) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     State2 = lists:foldl(
                fun(Channel) ->
@@ -253,7 +253,7 @@ privmsg(Target, MessageText, State) ->
                 Target,
                 MessageText)),
             {next_state, connected, State}
-    end;
+    end.
 
 part(Channel, PartMessage, State=#state{channels=Channels}) ->
     case gproc:where({n, l, eircd_channel:gproc_key(Channel)}) of
@@ -283,7 +283,7 @@ part(Channel, PartMessage, State=#state{channels=Channels}) ->
                         PartMessage)),
                     {next_state, connected, State#state{channels = lists:delete(Channel, Channels)}}
             end
-    end;
+    end.
 
 make_list_reply(#state{servername=ServerName, nick=Nick}) ->
     fun({ChannelName, MemberCount, Topic}) ->
