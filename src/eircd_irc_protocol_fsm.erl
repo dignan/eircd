@@ -135,7 +135,7 @@ connected({irc, {_, <<"PART">>, [Channels], PartMessage}}, State) ->
 connected({irc, {_, <<"PART">>, [[Channel]], PartMessage}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     {next_state, connected, part(Channel, PartMessage, State)};
-connected({irc, {_, <<"TOPIC">>, [Channel], Topic}}, State) ->
+connected({irc, {_, <<"TOPIC">>, [[Channel]], Topic}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     case gproc:where({n, l, eircd_channel:gproc_key(Channel)}) of
         undefined ->
@@ -165,7 +165,7 @@ connected({irc, {_, <<"TOPIC">>, [Channel], Topic}}, State) ->
 		    {next_state, connected, State}
              end
     end;
-connected({irc, {_, <<"TOPIC">>, [Channel], undefined}}, State) ->
+connected({irc, {_, <<"TOPIC">>, [[Channel]], undefined}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     case gproc:where({n, l, eircd_channel:gproc_key(Channel)}) of
         undefined ->
@@ -177,8 +177,14 @@ connected({irc, {_, <<"TOPIC">>, [Channel], undefined}}, State) ->
 	    {next_state, connected, State};
         Pid ->
             {ok, Topic} = eircd_channel:topic(Pid),
-            
-
+            maybe_send_topic(
+              State#state.protocol,
+              State#state.servername,
+              State#state.nick,
+              Channel,
+              Topic),
+            {next_state, connected, State}
+    end;
 connected({irc, {_, <<"MOTD">>, _, _}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     motd(State),
