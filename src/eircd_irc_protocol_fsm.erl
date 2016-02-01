@@ -337,8 +337,9 @@ gproc_key(Nick) -> {nick, Nick}.
 
 gproc_user_property(User) -> {user, User}.
 
+%% FIXME: handle {error, cannotsendtochan}
 send_message_to_channels(Channels, Message) ->
-    [eircd_channel:send_message(C, self(), Message) || C <- Channels].
+    [eircd_channel:send_message(gproc:lookup_pid({n, l, eircd_channel:gproc_key(C)}), self(), Message) || C <- Channels].
 
 target_type(Target) ->
     case binary:first(Target) of
