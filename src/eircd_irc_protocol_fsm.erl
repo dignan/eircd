@@ -153,7 +153,7 @@ connected({irc, {_, <<"TOPIC">>, [Channel], undefined}}, State) ->
 	    {next_state, connected, State};
         Pid ->
             {ok, Topic} = eircd_channel:topic(Pid),
-            maybe_send_topic(
+            send_topic_or_notopic(
               State#state.protocol,
               State#state.servername,
               State#state.nick,
@@ -366,10 +366,19 @@ send_message_to_nick_or_channel({nick, Pid}, Message) ->
 send_message_to_nick_or_channel({channel, Pid}, Message) ->
     eircd_channel:send_message(Pid, self(), Message).
 
-maybe_send_topic(Protocol, ServerName, Nick, Channel, <<>>) ->
+
+
+send_topic_or_notopic(Protocol, ServerName, Nick, Channel, <<>>) ->
     eircd_irc_protocol:send_message(
       Protocol,
-      eircd_irc_messages:rpl_notopic(ServerName, Nick, Channel));
+      eircd_irc_messages:rpl_notopic(ServerName, Nick, Channel)).
+send_topic_or_notopic(Protocol, Servername, Nick, Channel, Topic) ->
+    eircd_irc_protocol:send_message(
+      Protocol,
+      eircd_irc_messages:rpl_topic(Servername, Nick, Channel, Topic)).
+
+maybe_send_topic(Protocol, ServerName, Nick, Channel, <<>>) ->
+    ok;
 maybe_send_topic(Protocol, Servername, Nick, Channel, Topic) ->
     eircd_irc_protocol:send_message(
       Protocol,
