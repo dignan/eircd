@@ -2,6 +2,7 @@
 -behaviour(gen_server).
 -export([start_link/1]).
 -export([join/3, part/6, send_message/3, nick/3, topic/6, member_count/1, topic/1, name/1]).
+-export([validate_name/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 -export([gproc_key/1]).
 
@@ -38,6 +39,13 @@ member_count(ChannelPid) ->
 
 name(ChannelPid) ->
     gen_server:call(ChannelPid, name).
+
+validate_name(Name) when length(Name) > 50 -> false;
+validate_name(Name) -> 
+    case binary:first(Name) of
+        $# -> true;
+        _ -> false
+    end.
 
 init([Name]) ->
     true = gproc:reg({n, l, gproc_key(Name)}),

@@ -30,7 +30,7 @@ init([]) ->
     {ok, #state{}}.
 
 handle_call({channel, Channel}, _From, State=#state{channels=Channels, channel_refs=ChannelRefs}) ->
-    case validate_name(Channel) of
+    case eircd_channel:validate_name(Channel) of
         false ->
             {reply, {error, nosuchchannel}, State};
         true -> 
@@ -82,10 +82,3 @@ make_channel_list_reply(Channel) ->
     {ok, MemberCount} = eircd_channel:member_count(Pid),
     {ok, Topic} = eircd_channel:topic(Pid),
     {Name, MemberCount, Topic}.
-
-validate_name(Name) when length(Name) > 50 -> false;
-validate_name(Name) -> 
-    case binary:first(Name) of
-        $# -> true;
-        _ -> false
-    end.

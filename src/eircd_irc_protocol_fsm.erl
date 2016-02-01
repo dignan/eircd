@@ -236,15 +236,22 @@ terminate(_Reason, _StateName, _StateData) ->
 code_change(_OldVsn, StateName, State, _Extra) ->
     {ok, StateName, State}.
 
-join(Channel, State=#state{channels=Channels}) ->
-    {ok, Pid} = eircd_server:channel(Channel),
-    case eircd_channel:join(Pid, self(), State#state.nick) of
-        {error, alreadyjoined} ->
-            State;
+join(Channel, State) ->
+    case eircd_server:channel(Channel) of
         {error, nosuchchannel} ->
+            lager:info("Invalid channel name ~p", [Channel]),
             eircd_irc_protocol:send_message(
               State#state.protocol,
               eircd_irc_messages:err_nosuchchannel(State#state.servername, Channel)),
+            State;
+        {ok, Pid} ->
+                join(Channel, Pid, State)
+    end.
+
+join(Channel, State=#state{channels=Channels}, Pid) ->
+    {ok, Pid} = eircd_server:channel(Channel),
+    case eircd_channel:join(Pid, self(), State#state.nick) of
+        {error, alreadyjoined} ->
             State;
         {ok, Topic} ->
             Message = eircd_irc_messages:join(
