@@ -143,8 +143,7 @@ connected({irc, {_, <<"PRIVMSG">>, [Target], MessageText}}, State) ->
 	      eircd_irc_messages:err_nosuchnick(
 		State#state.servername,
 		State#state.nick,
-		Target
-	       )),
+		Target)),
             {next_state, connected, State};
         TargetPid ->
             send_message_to_nick_or_channel(
@@ -355,4 +354,3 @@ get_motd(File) ->
 	{error, enoent} ->
 	    {error, nomotd}
     end.
-
