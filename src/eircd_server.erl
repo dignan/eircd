@@ -87,5 +87,5 @@ validate_name(Name) when length(Name) > 50 -> false;
 validate_name(Name) -> 
     case binary:first(Name) of
         $# -> true;
-        true -> false
+        _ -> false
     end.
