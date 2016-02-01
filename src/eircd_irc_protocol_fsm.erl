@@ -108,8 +108,8 @@ connected({irc, {_, <<"NICK">>, [NewNick], _}}, State=#state{nick=Nick, user=Use
 connected({irc, {_, <<"PRIVMSG">>, [Targets], MessageText}}, State) when is_list(Targets) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     State2 = lists:foldl(
-               fun(Target) ->
-                       privmsg(Target, MessageText, State)
+               fun(Target, S) ->
+                       privmsg(Target, MessageText, S)
                end,
                State,
                Targets),
@@ -120,8 +120,8 @@ connected({irc, {_, <<"PRIVMSG">>, [Target], MessageText}}, State) ->
 connected({irc, {_, <<"JOIN">>, [Channels], _}}, State) when is_list(Channels) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     State2 = lists:foldl(
-               fun(Channel) ->
-                       join(Channel, State)
+               fun(Channel, S) ->
+                       join(Channel, S)
                end,
                State,
                Channels),
@@ -132,8 +132,8 @@ connected({irc, {_, <<"JOIN">>, [Channel], _}}, State)->
 connected({irc, {_, <<"PART">>, [Channels], PartMessage}}, State) when is_list(Channels) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     State2 = lists:foldl(
-               fun(Channel) ->
-                       part(Channel, PartMessage, State)
+               fun(Channel, S) ->
+                       part(Channel, PartMessage, S)
                end,
                State,
                Channels),
