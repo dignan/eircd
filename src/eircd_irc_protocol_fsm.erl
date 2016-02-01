@@ -165,6 +165,20 @@ connected({irc, {_, <<"TOPIC">>, [Channel], Topic}}, State) ->
 		    {next_state, connected, State}
              end
     end;
+connected({irc, {_, <<"TOPIC">>, [Channel], undefined}}, State) ->
+    eircd_ping_fsm:mark_activity(State#state.ping_fsm),
+    case gproc:where({n, l, eircd_channel:gproc_key(Channel)}) of
+        undefined ->
+	    eircd_irc_protocol:send_message(
+	      State#state.protocol,
+	      eircd_irc_messages:err_nosuchchannel(
+	        State#state.servername,
+                Channel)),
+	    {next_state, connected, State};
+        Pid ->
+            {ok, Topic} = eircd_channel:topic(Pid),
+            
+
 connected({irc, {_, <<"MOTD">>, _, _}}, State) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     motd(State),
@@ -327,8 +341,10 @@ send_message_to_nick_or_channel({nick, Pid}, Message) ->
 send_message_to_nick_or_channel({channel, Pid}, Message) ->
     eircd_channel:send_message(Pid, self(), Message).
 
-maybe_send_topic(_, _, _, _, <<>>) ->
-    ok;
+maybe_send_topic(Protocol, ServerName, Nick, Channel, <<>>) ->
+    eircd_irc_protocol:send_message(
+      Protocol,
+      eircd_irc_messages:rpl_notopic(ServerName, Nick, Channel));
 maybe_send_topic(Protocol, Servername, Nick, Channel, Topic) ->
     eircd_irc_protocol:send_message(
       Protocol,
