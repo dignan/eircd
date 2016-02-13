@@ -57,6 +57,7 @@ nick_and_user({irc, {_, <<"NICK">>, [Nick], _}}, State=#state{nick=undefined}) -
             eircd_irc_protocol:send_message(State#state.protocol, Reply),
             {next_state, nick_and_user, State};
         ok ->
+            lager:info("Registering ~p", [Nick]),
             true = gproc:reg({n, l, gproc_key(Nick)}),
             maybe_welcome(State#state{nick = Nick})
     end;
@@ -95,16 +96,19 @@ connected({irc, {_, <<"NICK">>, [NewNick], _}}, State=#state{nick=Nick, user=Use
     case eircd_server:nick(Nick, NewNick) of
         {error, nicknameinuse} ->
             Reply = eircd_irc_messages:err_nicknameinuse(State#state.servername, Nick),
-            eircd_irc_protocol:send_message(State#state.protocol, Reply);
+            eircd_irc_protocol:send_message(State#state.protocol, Reply),
+            {next_state, connected, State};
         ok ->
+            lager:info("Unregistering ~p", [Nick]),
+            lager:info("Registering ~p", [NewNick]),
             true = gproc:unreg({n, l, gproc_key(Nick)}),
             true = gproc:reg({n, l, gproc_key(NewNick)}),
             Message = eircd_irc_messages:nick(Nick, User, Address, NewNick),
             eircd_irc_protocol:send_message(State#state.protocol, Message),
             send_message_to_channels(State#state.channels, Message),
-            eircd_channel:nick(self(), Nick, NewNick)
-    end,
-    {next_state, connected, State};
+            eircd_channel:nick(self(), Nick, NewNick),
+            {next_state, connected, State#state{nick=NewNick}}
+    end;
 connected({irc, {_, <<"PRIVMSG">>, [Targets], MessageText}}, State) when is_list(Targets) ->
     eircd_ping_fsm:mark_activity(State#state.ping_fsm),
     State2 = lists:foldl(
@@ -371,13 +375,13 @@ send_message_to_nick_or_channel({channel, Pid}, Message) ->
 send_topic_or_notopic(Protocol, ServerName, Nick, Channel, <<>>) ->
     eircd_irc_protocol:send_message(
       Protocol,
-      eircd_irc_messages:rpl_notopic(ServerName, Nick, Channel)).
+      eircd_irc_messages:rpl_notopic(ServerName, Nick, Channel));
 send_topic_or_notopic(Protocol, Servername, Nick, Channel, Topic) ->
     eircd_irc_protocol:send_message(
       Protocol,
       eircd_irc_messages:rpl_topic(Servername, Nick, Channel, Topic)).
 
-maybe_send_topic(Protocol, ServerName, Nick, Channel, <<>>) ->
+maybe_send_topic(_, _, _, _, <<>>) ->
     ok;
 maybe_send_topic(Protocol, Servername, Nick, Channel, Topic) ->
     eircd_irc_protocol:send_message(
