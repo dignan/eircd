@@ -113,7 +113,7 @@ encode_message({Prefix, Command, Args, Trailing}) ->
 decode_message(Line) ->
     {Prefix, Rest} = get_prefix(Line),
     {Command, Args, Trailing} = get_command(Rest),
-    {Prefix, Command, Args, Trailing}.
+    {Prefix, string:to_upper(Command), Args, Trailing}.
 
 get_prefix(Line) ->
     case binary:first(Line) =:= $: of
