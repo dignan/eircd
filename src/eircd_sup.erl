@@ -29,4 +29,4 @@ init([]) ->
             permanent, 5000, supervisor, [eircd_irc_protocol_fsm_sup]
         }
     ],
-    {ok, { {one_for_one, 5, 10}, Children} }.
+    {ok, { {one_for_all, 5, 10}, Children} }.
