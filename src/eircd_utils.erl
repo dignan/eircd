@@ -2,6 +2,7 @@
 -export([join_list/2]).
 -export([random_string/1, random_string/2]).
 -export([get_ip_address_string/1]).
+-export([timestamp/0]).
 
 join_list(List, Separator) -> join_list(List, Separator, []).
 
@@ -22,3 +23,7 @@ random_string(N, Alphabet) ->
 get_ip_address_string(Address) ->
     {O1, O2, O3, O4} = Address,
     list_to_binary(io_lib:format("~b.~b.~b.~b", [O1, O2, O3, O4])).
+
+timestamp() ->
+    {Mega, Sec, Micro} = now(),
+    Mega * 1000000 * 1000000 + Sec * 1000000 + Micro.
