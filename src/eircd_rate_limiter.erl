@@ -20,7 +20,7 @@ start_link(MaxEvents, Period) ->
     gen_server:start_link(?MODULE, [MaxEvents, Period], []).
 
 send_event(Pid) ->
-    gen_server:cast(Pid, {event, eircd_utils:timestamp()}).
+    gen_server:call(Pid, {event, eircd_utils:timestamp()}).
 
 init([MaxEvents, Period]) ->
     {ok, #state{max_events = MaxEvents, period = Period}}.
