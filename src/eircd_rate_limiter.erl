@@ -31,7 +31,7 @@ handle_call({event, Timestamp}, _From, State=#state{events=Events,
     NewEvents = remove_old_events(queue:in(Timestamp, Events),
                                   eircd_utils:timestamp() - Period),
     IsRateLimited = queue:len(NewEvents) > MaxEvents,
-    {reply, IsRateLimited, State#state{events = Events}};
+    {reply, IsRateLimited, State#state{events = NewEvents}};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
