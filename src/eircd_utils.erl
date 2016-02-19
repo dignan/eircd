@@ -7,6 +7,7 @@
 -export([binary_to_upper/1]).
 
 -compile([{nowarn_deprecated_function, [{erlang, now, 0}]}]).
+
 join_list(List, Separator) -> join_list(List, Separator, []).
 
 join_list([], _, _) -> [];
