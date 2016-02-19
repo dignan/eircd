@@ -1,9 +1,11 @@
 -module(eircd_utils).
+
 -export([join_list/2]).
 -export([random_string/1, random_string/2]).
 -export([get_ip_address_string/1]).
 -export([timestamp/0]).
 
+-compile([{nowarn_deprecated_function, [{erlang, now, 0}]}]).
 join_list(List, Separator) -> join_list(List, Separator, []).
 
 join_list([], _, _) -> [];
@@ -25,5 +27,10 @@ get_ip_address_string(Address) ->
     list_to_binary(io_lib:format("~b.~b.~b.~b", [O1, O2, O3, O4])).
 
 timestamp() ->
-    {Mega, Sec, Micro} = now(),
-    Mega * 1000000 * 1000000 + Sec * 1000000 + Micro.
+    try
+        erlang:system_time(micro_seconds)
+    catch
+        error:undef ->
+            {Mega, Sec, Micro} = erlang:now(),
+            Mega * 1000000 * 1000000 + Sec * 1000000 + Micro
+    end.
