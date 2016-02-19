@@ -4,6 +4,7 @@
 -export([random_string/1, random_string/2]).
 -export([get_ip_address_string/1]).
 -export([timestamp/0]).
+-export([binary_to_upper/1]).
 
 -compile([{nowarn_deprecated_function, [{erlang, now, 0}]}]).
 join_list(List, Separator) -> join_list(List, Separator, []).
@@ -34,3 +35,6 @@ timestamp() ->
             {Mega, Sec, Micro} = erlang:now(),
             Mega * 1000000 * 1000000 + Sec * 1000000 + Micro
     end.
+
+binary_to_upper(B) ->
+     list_to_binary(string:to_upper(binary_to_list(B))).
